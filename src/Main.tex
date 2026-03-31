@@ -1,0 +1,253 @@
+\PassOptionsToPackage{table}{xcolor} % Fixes the xcolor option clash
+\documentclass[10pt]{article}
+\usepackage[accepted]{icml2024}
+% Standard encoding and language
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+% Math and Graphics
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+% tikz
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{shapes,arrows,positioning,calc,chains,positioning,shadows,arrows.meta}
+\pgfplotsset{compat=1.18}
+
+% Definição de estilos personalizados para os componentes
+\tikzset{
+    % Estilo para blocos genéricos (VCO, Amplificador)
+    block/.style = {
+        draw,
+        rectangle,
+        rounded corners,
+        minimum height=1.5cm,
+        minimum width=2.5cm,
+        align=center,
+        fill=blue!5, % Um leve preenchimento azul para destacar
+        thick
+    },
+    % Estilo para setas de conexão
+    signal/.style = {
+        -,
+        >=stealth', % Ponta da seta mais elegante
+        thick,
+        shorten >=1pt
+    },
+    % Estilo para rótulos de frequência/sinal
+    label/.style = {
+        font=\small\itshape,
+        text centered
+    }
+}
+
+\renewcommand{\refname}{Referências}
+\icmltitlerunning{PSI 5844: Projeto e Implementação de Radares Micro-Ondas}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Projeto de mixer de frequência}
+
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Gabriel Pereira de Carvalho}{} \hfill NUSP: 11257668 \\
+\icmlauthor{Heitor Albuquerque}{} \hfill NUSP: XXXXXXXX \\
+\end{icmlauthorlist}
+
+%\icmlaffiliation{af}{Universidade de São Paulo}
+%\icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
+%\icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+\vskip 0.3in
+]
+
+\begin{abstract}
+O objetivo desse trabalho é relatar o design e implementação de um mixer de frequência para o projeto da disciplina PSI 5844.
+\end{abstract}
+
+\section{Introdução}
+
+No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um radar de onda contínua modulada por frequência também chamado de radar FMCW (do inglês, Frequency Modulated Continuous Wave radar). Para atingir esse objetivo, a turma se dividiu em duplas focadas no estudo de um bloco específico para a fabricação do radar. Nesse trabalho, apresentamos a contribuição realizada pela nossa dupla que se concentrou no design do mixer de frequência utilizado na cadeia de recepção do radar.
+
+\begin{figure}[h!]
+    \centering
+    \caption{Diagrama de blocos do radar FMCW}
+    \resizebox{.45\textwidth}{!}{
+        \begin{tikzpicture}[node distance=2.5cm, font=\sffamily]
+            % --- Camada Superior (TX) ---
+            \node [block] (vco) {VCO};
+            \node [block, right=of vco] (pa) {PA};
+            \node [right=of pa] (ant_tx_ref) {};
+            % --- Camada Inferior (RX) ---
+            \node [draw, circle, minimum size=.8cm, below=2cm of $(vco.east)!0.5!(pa.west)$] (mixer) {\Huge $\times$};
+            \node [left=0.1cm of mixer] {\large Mixer};
+            \node [block, below=of mixer] (adc) {ADC};
+            \node [block, right=of mixer, xshift=1cm] (lna) {LNA};
+            \node [right=of lna] (ant_rx_ref) {};
+
+            % --- Conexões ---
+            \draw [thick] (vco.east) -- (pa.west);
+            \draw [signal] (pa.east) -- (ant_tx_ref.center);
+            \draw [signal] ($(vco.east)!0.5!(pa.west)$) -- (mixer.north);
+            \draw [signal] (ant_rx_ref.center) -- (lna.east);
+            \draw [signal] (lna.west) -- (mixer.east);
+            \draw [signal] (mixer.south) -- (adc.north);
+
+            % --- Desenho das Antenas (Y-shape) ---
+            \draw [thick] (ant_tx_ref.center) -- ++(0, 0.6cm) node (tip_tx) {};
+            \draw [thick] (tip_tx.center) -- ++(0.4cm, 0.4cm);
+            \draw [thick] (tip_tx.center) -- ++(-0.4cm, 0.4cm);
+
+            \draw [thick] (ant_rx_ref.center) -- ++(0, 0.6cm) node (tip_rx) {};
+            \draw [thick] (tip_rx.center) -- ++(0.4cm, 0.4cm);
+            \draw [thick] (tip_rx.center) -- ++(-0.4cm, 0.4cm);
+
+            % Rótulos
+            \node [below=0.3cm of ant_tx_ref] {Antena TX};
+            \node [below=0.3cm of ant_rx_ref] {Antena RX};
+            \node [above=1cm of ant_tx_ref.east, xshift=0.6cm] {\Large $f_0$};
+            \node [above=1cm of ant_rx_ref.east, xshift=0.6cm] {\Large $f_1$};
+        \end{tikzpicture}
+    }
+    \label{fig:blocos_fmcw}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: os autores\par}
+\end{figure}
+
+Conforme a figura \ref{fig:blocos_fmcw}, o mixer é um componente de três portas, com duas entradas $x_0(t), x_1(t)$ representando os sinais das antenas TX e RX, respectivamente, e uma saída $x_{\text{out}}(t)$. Para entradas cossenoidais satisfazendo
+
+\begin{align*}
+    \begin{cases}
+        x_0(t) = A_0 \cos(2 \pi f_0 t) \\
+        x_1(t) = A_1 \cos(2 \pi f_1 t)
+    \end{cases}
+\end{align*}
+
+observamos que uma multiplicação no domínio do tempo permite obter a frequência de soma $f_0 + f_1$ e a frequência de diferença $f_0 - f_1$
+
+\begin{equation*}
+    x_0(t) \cdot x_1(t) = \frac{A_0 A_1}{2} \Bigl( \cos(2 \pi (f_0 + f_1) t) + \cos(2 \pi (f_0 - f_1) t)\Bigr)
+\end{equation*}
+
+um componente implementando essa multiplicação é chamado de mixer de banda lateral dupla ou mixer DSB (do inglês, dual-band side mixer).
+
+Nosso objetivo no projeto é obter uma saída $x_{\text{out}}(t)$ apenas com a frequência de diferença $f_0 - f_1$ para a cadeia de recepção do radar, processo conhecido como down-conversão. O componente implementando essa função é chamado de mixer de banda lateral única ou mixer SSB (do inglês, single-sideband mixer).
+
+\begin{figure}[h!]
+    \centering
+    \caption{Diagrama de mixer SSB}
+    \includegraphics[width=0.45\textwidth]{images/ssb_mixer.png}
+    \label{fig:ssb_mixer}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{pohl} \par}
+\end{figure}
+
+Para um radar FMCW, a entrada $x_0$ é uma cossenoide cuja frequência é linearmente proporcional ao tempo, também chamada de chirp.
+
+\begin{figure}[h!]
+    \centering
+    \caption{Chirp transmitido em radar FMCW}
+    \resizebox{.4\textwidth}{!}{
+        \begin{tikzpicture}
+
+            % --- Definição de Parâmetros Globais ---
+            \def\tmax{5}           % Tempo máximo de simulação (segundos)
+            \def\fzero{1}          % Frequência inicial (f0) em Hz
+            \def\kcoeff{0.5}       % Coeficiente de chirp em Hz/s
+            \def\amplitude{1.2}    % Amplitude do sinal
+
+            % x(t) = cos(2*pi * (f0*t + (k/2)*t^2))
+            \begin{axis}[
+                name=timeaxis,
+                width=12cm, height=3cm,    % Dimensões do gráfico
+                xmin=0, xmax=\tmax,         % Limites do eixo X (Tempo)
+                ymin=-\amplitude-0.3, ymax=\amplitude+0.3, % Limites do eixo Y (Amplitude)
+                axis lines=middle,         % Eixos cruzando no centro (estilo clássico de engenharia)
+                inner axis line style={=>},% Setas nas extremidades dos eixos
+                xlabel style={at={(ticklabel* cs:1)}, anchor=west}, % Posiciona o rótulo do eixo X
+                ylabel style={at={(ticklabel* cs:1)}, anchor=south},% Posiciona o rótulo do eixo Y
+                xlabel={$t$ [s]},          % Rótulo do eixo X (Tempo)
+                ylabel={$x(t)$},           % Rótulo do eixo Y (Sinal)
+                title={\textbf{Chirp no Domínio do Tempo}},
+                ticks=none,                % Remove os números dos ticks (para focar na forma)
+                clip=false                 % Impede que elementos decorativos sejam cortados
+            ]
+
+                % Traça a função do sinal Chirp
+                % A fase é phi(t) = 2*pi * (f0*t + k/2 * t^2)
+                % Usamos o parâmetro \x como variável t do pgfplots
+                \addplot [
+                    domain=0:\tmax,        % Intervalo de plotagem
+                    samples=400,           % Número de pontos (aumente para suavizar em altas frequências)
+                    thick,                 % Linha grossa
+                    blue                   % Cor azul
+                ] {
+                    \amplitude * cos(360 * (\fzero * x + 0.5 * \kcoeff * x^2))
+                };
+
+            \end{axis}
+
+            % f(t) = f0 + k*t
+            \begin{axis}[
+                name=freqaxis,
+                at={(timeaxis.below south west)}, % Posiciona abaixo do gráfico anterior
+                yshift=-2cm,                      % Adiciona um espaçamento vertical
+                width=12cm, height=3cm,    % Mesmas dimensões
+                xmin=0, xmax=\tmax,         % Mesmo intervalo de tempo no eixo X
+                ymin=0, ymax={\fzero + \kcoeff*\tmax + 1}, % Eixo Y começa em 0 e vai até fmax
+                axis lines=left,           % Eixos apenas na esquerda e embaixo
+                xlabel style={at={(ticklabel* cs:1)}, anchor=west},
+                ylabel style={at={(ticklabel* cs:1)}, anchor=south},
+                xlabel={$t$ [s]},          % Eixo X ainda é tempo (para mostrar evolução)
+                ylabel={$f$ [Hz]},    % Rótulo do eixo Y (Frequência Instantânea)
+                title={\textbf{Chirp no Domínio da Frequência}},
+                grid=both,                 % Adiciona uma grade de fundo
+                grid style={line width=.1pt, draw=gray!20}, % Estilo da grade
+                ticks=none                 % Remove os números dos ticks
+            ]
+
+                % Traça a linha reta da frequência instantânea
+                % f_i(t) = f0 + k*t
+                \addplot [
+                    domain=0:\tmax,        % Mesma duração
+                    samples=2,             % Uma reta precisa de apenas 2 pontos
+                    ultra thick,           % Linha muito grossa
+                    red                    % Cor vermelha
+                ] {
+                    \fzero + \kcoeff * x
+                };
+
+            \end{axis}
+        \end{tikzpicture}
+    }
+    \label{fig:chirp}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: os autores\par}
+\end{figure}
+
+Em um cenário simplificado, com apenas um objeto na linha de visada do radar, a frequência de diferença $f_0 - f_1$ é proporcional ao tempo de ida e volta $\tau = \frac{2d}{c}$ do sinal recebido, satisfazendo
+
+\begin{equation*}
+    f_0 - f_1 = S\left(\frac{2d}{c}\right)
+\end{equation*}
+
+dessa forma, a frequência da saída $x_{\text{out}}$ do mixer pode ser usada para detecção e medição de distância de objetos \cite{rao2017introduction}. Num primeiro momento, o objetivo do projeto da disciplina é a fabricação de um radar FMCW simples para medições de distância.
+
+\section{Topologia de anel de diodos}
+
+A topologia clássica para mixer ativos é a topologia de anel de diodos \cite{ADI_Ch4}.
+
+\begin{figure}[h!]
+    \centering
+    \caption{Mixer com a topologia de anel de diodos}
+    \includegraphics[width=.4\textwidth]{images/diode_ring_mixer.png}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{ADI_Ch4}\par}
+\end{figure}
+
+\newpage
+\bibliography{refs}
+\bibliographystyle{icml2024}
+
+\end{document}
