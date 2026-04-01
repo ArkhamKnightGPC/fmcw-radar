@@ -8,8 +8,10 @@
 % Math and Graphics
 \usepackage{amsmath, amssymb}
 \usepackage{graphicx}
+\usepackage{subcaption}
 % tikz
 \usepackage{tikz}
+\usepackage{circuitikz}
 \usepackage{pgfplots}
 \usetikzlibrary{shapes,arrows,positioning,calc,chains,positioning,shadows,arrows.meta}
 \pgfplotsset{compat=1.18}
@@ -106,8 +108,8 @@ No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um r
             % Rótulos
             \node [below=0.3cm of ant_tx_ref] {Antena TX};
             \node [below=0.3cm of ant_rx_ref] {Antena RX};
-            \node [above=1cm of ant_tx_ref.east, xshift=0.6cm] {\Large $f_0$};
-            \node [above=1cm of ant_rx_ref.east, xshift=0.6cm] {\Large $f_1$};
+            \node [above=1cm of ant_tx_ref.east, xshift=0.6cm] {\Large $f_{\text{LO}}$};
+            \node [above=1cm of ant_rx_ref.east, xshift=0.6cm] {\Large $f_{\text{RF}}$};
         \end{tikzpicture}
     }
     \label{fig:blocos_fmcw}
@@ -115,24 +117,52 @@ No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um r
     {\footnotesize \raggedright Fonte: os autores\par}
 \end{figure}
 
-Conforme a figura \ref{fig:blocos_fmcw}, o mixer é um componente de três portas, com duas entradas $x_0(t), x_1(t)$ representando os sinais das antenas TX e RX, respectivamente, e uma saída $x_{\text{out}}(t)$. Para entradas cossenoidais satisfazendo
+Conforme a figura \ref{fig:blocos_fmcw}, o mixer é um componente de três portas, com duas entradas $x_{\text{LO}}(t), x_{\text{RF}}(t)$ representando os sinais das antenas TX e RX, respectivamente, e uma saída $x_{\text{IF}}(t)$. Para entradas cossenoidais satisfazendo
 
 \begin{align*}
     \begin{cases}
-        x_0(t) = A_0 \cos(2 \pi f_0 t) \\
-        x_1(t) = A_1 \cos(2 \pi f_1 t)
+        x_{\text{LO}}(t) = A_0 \cos(2 \pi f_{\text{LO}} t) \\
+        x_{\text{RF}}(t) = A_1 \cos(2 \pi f_{\text{RF}} t)
     \end{cases}
 \end{align*}
 
-observamos que uma multiplicação no domínio do tempo permite obter a frequência de soma $f_0 + f_1$ e a frequência de diferença $f_0 - f_1$
+observamos que uma multiplicação no domínio do tempo permite obter a frequência de soma $f_{\text{LO}} + f_{\text{RF}}$ e a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$
 
 \begin{equation*}
-    x_0(t) \cdot x_1(t) = \frac{A_0 A_1}{2} \Bigl( \cos(2 \pi (f_0 + f_1) t) + \cos(2 \pi (f_0 - f_1) t)\Bigr)
+    x_{\text{LO}}(t) \cdot x_{\text{RF}}(t) = \frac{A_0 A_1}{2} \Bigl( \cos(2 \pi (f_{\text{LO}} + f_{\text{RF}}) t) + \cos(2 \pi (f_{\text{LO}} - f_{\text{RF}}) t)\Bigr)
 \end{equation*}
 
-um componente implementando essa multiplicação é chamado de mixer de banda lateral dupla ou mixer DSB (do inglês, dual-band side mixer).
+dessa forma, o multiplicador representa o modelo do mixer ideal. Sejam $P_{\text{out}} = \frac{A_{\text{out}}^2}{2}$ e $P_{\text{RF}} = \frac{A_{\text{RF}}^2}{2}$ as potências médias dos sinais IF e RF. Observamos que, para o mixer passivo ideal, a perda de conversão $L_c (\text{dB}) = -10\log\left(\frac{A_{\text{out}}}{A_1}\right)$ é de 3 dB porque a potência do sinal é dividida entre os dois harmônicos gerados.
 
-Nosso objetivo no projeto é obter uma saída $x_{\text{out}}(t)$ apenas com a frequência de diferença $f_0 - f_1$ para a cadeia de recepção do radar, processo conhecido como down-conversão. O componente implementando essa função é chamado de mixer de banda lateral única ou mixer SSB (do inglês, single-sideband mixer).
+Um componente implementando esse modelo é chamado de mixer de banda lateral dupla ou mixer DSB (do inglês, dual-band side mixer), com uma perda de conversão esperada em torno de 6 dB devido ao surgimento de frequências de intermodulação e perdas do circuito.
+
+\begin{figure}[h!]
+    \centering
+    \caption{Diagrama de mixer DSB}
+    \begin{subfigure}[t]{.48\textwidth}
+        \centering
+        \begin{circuitikz}
+            \draw (0,0) node[mixer] (m) {};
+            \draw (m.w) to[short,-o] ++(-0.7,0) node[below] {\large $x_{\text{LO}}$};
+            \draw (m.w) node[inputarrow] {};
+            \draw (m.s) to[short,-o] ++(0,-0.7) node[left] {\large $x_{\text{RF}}$};
+            \draw (m.s) node[inputarrow, rotate=90] {};
+            \draw (m.e) to[short,-o] ++(0.7,0) node[right] {\large $x_{\text{IF}}$};
+        \end{circuitikz}
+        %caption{}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/dsb_mixer.png}
+        %\caption{}
+    \end{subfigure}
+    \label{fig:dsb_mixer}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{pohl} \par}
+\end{figure}
+
+Nosso objetivo no projeto é obter uma saída $x_{\text{IF}}(t)$ apenas com a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$ para a cadeia de recepção do radar, processo conhecido como down-conversão. O componente implementando essa função é chamado de mixer de banda lateral única ou mixer SSB (do inglês, single-sideband mixer).
 
 \begin{figure}[h!]
     \centering
@@ -143,7 +173,7 @@ Nosso objetivo no projeto é obter uma saída $x_{\text{out}}(t)$ apenas com a f
     {\footnotesize \raggedright Fonte: \cite{pohl} \par}
 \end{figure}
 
-Para um radar FMCW, a entrada $x_0$ é uma cossenoide cuja frequência é linearmente proporcional ao tempo, também chamada de chirp.
+Para um radar FMCW, a entrada $x_{\text{LO}}$ gerada pelo VCO é uma cossenoide cuja frequência é linearmente proporcional ao tempo, também chamada de chirp.
 
 \begin{figure}[h!]
     \centering
@@ -226,13 +256,17 @@ Para um radar FMCW, a entrada $x_0$ é uma cossenoide cuja frequência é linear
     {\footnotesize \raggedright Fonte: os autores\par}
 \end{figure}
 
-Em um cenário simplificado, com apenas um objeto na linha de visada do radar, a frequência de diferença $f_0 - f_1$ é proporcional ao tempo de ida e volta $\tau = \frac{2d}{c}$ do sinal recebido, satisfazendo
+Em um cenário simplificado, com apenas um objeto na linha de visada do radar, a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$ é proporcional ao tempo de ida e volta $\tau = \frac{2d}{c}$ do sinal recebido, satisfazendo
 
 \begin{equation*}
-    f_0 - f_1 = S\left(\frac{2d}{c}\right)
+    f_{\text{LO}} - f_{\text{RF}} = S\left(\frac{2d}{c}\right)
 \end{equation*}
 
-dessa forma, a frequência da saída $x_{\text{out}}$ do mixer pode ser usada para detecção e medição de distância de objetos \cite{rao2017introduction}. Num primeiro momento, o objetivo do projeto da disciplina é a fabricação de um radar FMCW simples para medições de distância.
+dessa forma, a frequência da saída $x_{\text{IF}}$ do mixer pode ser usada para detecção e medição de distância de objetos \cite{rao2017introduction}.
+
+A medição de velocidade, utilizando o efeito Doppler, é mais simples. Nesse caso, a cossenoide gerada pelo VCO têm frequência constante (um pulso no domínio da frequência).
+
+Num primeiro momento, o objetivo do projeto da disciplina é a fabricação de um radar simples para medições de velocidade.
 
 \section{Topologia de anel de diodos}
 
