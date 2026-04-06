@@ -1,6 +1,11 @@
 *.pdf
 *.loq
 
+# ADS
+*.tag
+*.wrkstate
+*.cdslck
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof

@@ -7,8 +7,10 @@
 \usepackage[portuguese]{babel}
 % Math and Graphics
 \usepackage{amsmath, amssymb}
+\usepackage{mathtools}
 \usepackage{graphicx}
 \usepackage{subcaption}
+\usepackage{hyperref}
 % tikz
 \usepackage{tikz}
 \usepackage{circuitikz}
@@ -68,13 +70,13 @@
 O objetivo desse trabalho é relatar o design e implementação de um mixer de frequência para o projeto da disciplina PSI 5844.
 \end{abstract}
 
-\section{Introdução}
+\section{Introdução} \label{section:intro}
 
-No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um radar de onda contínua modulada por frequência também chamado de radar FMCW (do inglês, Frequency Modulated Continuous Wave radar). Para atingir esse objetivo, a turma se dividiu em duplas focadas no estudo de um bloco específico para a fabricação do radar. Nesse trabalho, apresentamos a contribuição realizada pela nossa dupla que se concentrou no design do mixer de frequência utilizado na cadeia de recepção do radar.
+No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um radar de onda contínua também chamado de radar CW (do inglês, Continuous Wave radar) que emite um sinal à uma frequência constante de forma contínua permitindo a detecção de objetos em movimento a partir da diferença de frequência no sinal recebido $\Delta f$ utilizando o efeito Doppler. Por isso, o radar CW também é chamado de radar Doppler. Para atingir esse objetivo, a turma definiu uma frequência alvo de $5.8$ GHz e se dividiu em duplas focadas no estudo de um bloco específico para a fabricação do radar. Nesse trabalho, apresentamos a contribuição realizada pela nossa dupla que se concentrou no design do mixer de frequência utilizado na cadeia de recepção do radar.
 
-\begin{figure}[h!]
+\begin{figure}[h]
     \centering
-    \caption{Diagrama de blocos do radar FMCW}
+    \caption{Diagrama de blocos do radar CW}
     \resizebox{.45\textwidth}{!}{
         \begin{tikzpicture}[node distance=2.5cm, font=\sffamily]
             % --- Camada Superior (TX) ---
@@ -112,173 +114,219 @@ No projeto da disciplina, o objetivo da turma é fabricar de forma conjunta um r
             \node [above=1cm of ant_rx_ref.east, xshift=0.6cm] {\Large $f_{\text{RF}}$};
         \end{tikzpicture}
     }
-    \label{fig:blocos_fmcw}
+    \label{fig:blocos_cw}
     \par\vspace{0.01cm}
     {\footnotesize \raggedright Fonte: os autores\par}
 \end{figure}
 
-Conforme a figura \ref{fig:blocos_fmcw}, o mixer é um componente de três portas, com duas entradas $x_{\text{LO}}(t), x_{\text{RF}}(t)$ representando os sinais das antenas TX e RX, respectivamente, e uma saída $x_{\text{IF}}(t)$. Para entradas cossenoidais satisfazendo
+Conforme a Figura \ref{fig:blocos_cw}, o mixer em nosso radar CW é um componente de três portas, com duas entradas $x_{\text{LO}}(t)$, $x_{\text{RF}}(t)$ representando os sinais das antenas TX e RX, respectivamente, e uma saída $x_{\text{IF}}(t)$ tal que a frequência do sinal de saída $f_{\text{IF}}$ é igual a diferença entre as frequências instantâneas na entrada $\Delta f = f_{LO} - f_{RF}$. Esse processo é conhecido como down-conversão.
+
+Na Seção \ref{section:ideal} apresentamos o modelo do mixer ideal e como um estágio adicional de filtragem pode ser utilizado para obter uma única banda lateral na saída. Em seguida, na Seções \ref{section:squareLaw} e \ref{section:phaseSwitch} apresentamos dois modelos com abordagens diferentes para implementação do mixer de frequência, o primeiro baseado numa aproximação de ordem 2 da curva IV de diodos e transistores, e o segundo baseado na comutação de fases das entradas. Na Seção \ref{section:schottky} introduzimos o diodo Schottky, componente bastante utilizado para design RF. Então apresentamos diferentes topologias para mixer em frequências na Seção \ref{section:topologies}, argumentando a escolha da topologia single balanced com par de diodos Schottky feita para o projeto. O design e a simulação do mixer são apresentados na Seção \ref{section:ADS}.
+
+\section{Modelo do mixer ideal} \label{section:ideal}
+
+Primeiramente, observamos que o produto de sinais cossenoidais pode ser transformado numa soma a partir da fórmula de Prostaférese
+\begin{equation*}
+    \cos(p) \cdot \cos(q) = \frac{1}{2} \bigl( \cos(p+q) + \cos(p-q) \bigr)
+\end{equation*}
+
+dessa forma, para entradas cossenoidais satisfazendo
 
 \begin{align*}
     \begin{cases}
-        x_{\text{LO}}(t) = A_0 \cos(2 \pi f_{\text{LO}} t) \\
-        x_{\text{RF}}(t) = A_1 \cos(2 \pi f_{\text{RF}} t)
+        x_{\text{LO}}(t) = A_{\text{LO}} \cos(2 \pi f_{\text{LO}} t) \\
+        x_{\text{RF}}(t) = A_{\text{RF}} \cos(2 \pi f_{\text{RF}} t)
     \end{cases}
 \end{align*}
 
-observamos que uma multiplicação no domínio do tempo permite obter a frequência de soma $f_{\text{LO}} + f_{\text{RF}}$ e a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$
+uma multiplicação no domínio do tempo permite obter a frequência de soma $f_{\text{LO}} + f_{\text{RF}}$ e a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$
 
 \begin{equation*}
-    x_{\text{LO}}(t) \cdot x_{\text{RF}}(t) = \frac{A_0 A_1}{2} \Bigl( \cos(2 \pi (f_{\text{LO}} + f_{\text{RF}}) t) + \cos(2 \pi (f_{\text{LO}} - f_{\text{RF}}) t)\Bigr)
+    x_{\text{LO}}(t) \cdot x_{\text{RF}}(t) = \frac{A_{\text{LO}} A_{\text{RF}}}{2} \Bigl( \cos(2 \pi (f_{\text{LO}} + f_{\text{RF}}) t) + \cos(2 \pi (f_{\text{LO}} - f_{\text{RF}}) t)\Bigr)
 \end{equation*}
 
-dessa forma, o multiplicador representa o modelo do mixer ideal. Sejam $P_{\text{out}} = \frac{A_{\text{out}}^2}{2}$ e $P_{\text{RF}} = \frac{A_{\text{RF}}^2}{2}$ as potências médias dos sinais IF e RF. Observamos que, para o mixer passivo ideal, a perda de conversão $L_c (\text{dB}) = -10\log\left(\frac{A_{\text{out}}}{A_1}\right)$ é de 3 dB porque a potência do sinal é dividida entre os dois harmônicos gerados.
+portanto, o multiplicador representa o modelo do mixer ideal.
 
-Um componente implementando esse modelo é chamado de mixer de banda lateral dupla ou mixer DSB (do inglês, dual-band side mixer), com uma perda de conversão esperada em torno de 6 dB devido ao surgimento de frequências de intermodulação e perdas do circuito.
+Sejam $P_{\text{IF}} = \frac{A_{\text{IF}}^2}{2}$ e $P_{\text{RF}} = \frac{A_{\text{RF}}^2}{2}$ as potências médias dos sinais IF e RF. Observe que, mesmo para o mixer ideal, existe uma perda de conversão $L_c (\text{dB}) = -10 \log\left(\frac{P_{\text{IF}}}{P_{\text{RF}}}\right)$ de $-3$ dB porque a potência do sinal é dividida entre os dois harmônicos gerados.
 
-\begin{figure}[h!]
+Na prática, as frequências $f_{\text{LO}}$ e $f_{\text{RF}}$ são bastante próximas de modo que a frequência de soma $f_{\text{LO}} + f_{\text{RF}}$ é aproximadamente duas vezes maior que as frequências nas entradas e a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$ é muito menor do que as frequências nas entradas. Dessa forma, na construção do mixer de frequência para down-conversão, um filtro passa-baixas pode ser aplicado para filtrar o harmônico da frequência de diferença.
+
+\section{Modelo de mixer de lei quadrática} \label{section:squareLaw}
+
+Na Figura \ref{fig:squareLaw} temos um circuito genérico implementando um mixer de frequência com sinais de corrente nas entradas $x_{\text{LO}}$ e $x_{\text{RF}}$. Na esquerda, temos um diplexer utilizado para combinar os sinais de entrada em um nó com corrente $x_{\text{LO}} + x_{\text{RF}}$. Na direita, temos um componente não-linear (um diodos ou um transistor) responsável pela mistura de frequências.
+
+\begin{figure}[h]
     \centering
-    \caption{Diagrama de mixer DSB}
-    \begin{subfigure}[t]{.48\textwidth}
-        \centering
-        \begin{circuitikz}
-            \draw (0,0) node[mixer] (m) {};
-            \draw (m.w) to[short,-o] ++(-0.7,0) node[below] {\large $x_{\text{LO}}$};
-            \draw (m.w) node[inputarrow] {};
-            \draw (m.s) to[short,-o] ++(0,-0.7) node[left] {\large $x_{\text{RF}}$};
-            \draw (m.s) node[inputarrow, rotate=90] {};
-            \draw (m.e) to[short,-o] ++(0.7,0) node[right] {\large $x_{\text{IF}}$};
-        \end{circuitikz}
-        %caption{}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[t]{.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{images/dsb_mixer.png}
-        %\caption{}
-    \end{subfigure}
-    \label{fig:dsb_mixer}
+    \caption{Modelo de mixer com diplexer e componente não-linear de ordem 2}
+    \includegraphics[width=.3\textwidth]{images/squareLaw.png}
+    \label{fig:squareLaw}
     \par\vspace{0.01cm}
-    {\footnotesize \raggedright Fonte: \cite{pohl} \par}
+    {\footnotesize \raggedright Fonte: \href{https://www.youtube.com/watch?v=TaaIEdIzofc}{(RF Get Down, 2023)} \par}
 \end{figure}
 
-Nosso objetivo no projeto é obter uma saída $x_{\text{IF}}(t)$ apenas com a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$ para a cadeia de recepção do radar, processo conhecido como down-conversão. O componente implementando essa função é chamado de mixer de banda lateral única ou mixer SSB (do inglês, single-sideband mixer).
+Para potências de entrada baixas próximas da tensão interna da junção $V_{th}$, a curva IV característica pode ser expandida em uma série de Taylor e aproximada por uma curva de ordem 2. Ao aplicarmos a soma das entrada $x_{\text{LO}} + x_{\text{RF}}$ no componente, temos a saída
+\[
+y(t) = a_2 \bigl( A_{\text{LO}}\cos(\omega_{\text{LO}}) + A_{\text{RF}}\cos(\omega_{\text{RF}}) \bigr)^2
+\]
+onde o produto pode ser expandido para gerar produtos de cossenos com as frequências $f_{\text{LO}} \pm f_{\text{RF}}$. Temos
+\[
+\begin{split}
+y(t) = &\frac{a_2( A_{\text{LO}}^2 + A_{\text{RF}}^2)}{2} \\
+& + \frac{a_2 A_{\text{LO}}^2}{2}\cos(2\omega_{\text{LO}}t) \\
+& + \frac{a_2 A_{\text{RF}}^2}{2}\cos(2\omega_{\text{RF}}t) \\
+& + a_2 A_{\text{LO}} A_{\text{RF}}\cos((\omega_{\text{LO}} + \omega_{\text{RF}})t) \\
+& + a_2 A_{\text{LO}} A_{\text{RF}}\cos((\omega_{\text{LO}} - \omega_{\text{RF}})t)
+\end{split}
+\]
+onde observamos a presença de produtos desejados, mas também de componentes indesejados, como o nível DC e os segundos harmônicos ($2f_{\text{LO}}$, $2f_{\text{RF}}$). Portanto o estágio final do mixer deve incluir filtros para isolar o sinal $x_{\text{IF}}$ desejado.
 
-\begin{figure}[h!]
+\section{Modelo de mixer de comutação de fase} \label{section:phaseSwitch}
+
+As topologias que serão exploradas implementam um outro modelo de mistura a partir de comutação de fase. Neste modelo, o sinal do VCO $x_{\text{LO}}(t)$ possui potência suficientemente maior do que a tensão interna das junções $V_{th}$ para atuar como um sinal de controle, operando os componentes não-lineares como chaves ideais.
+
+Seja $x_{\text{LO}}(t) = A_{\text{LO}}\sum_{n=1,3,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)$ uma onda quadrada periódica representada em série de Fourier.
+
+Ao realizar o produto $x_{\text{IF}}(t) = x_{\text{LO}}(t) \cdot x_{\text{RF}}(t)$ temos
+\[
+y(t) = A_{\text{LO}}A_{\text{RF}}\frac{\pi}{4}\cos(\omega_{\text{LO}}t)\cos(\omega_{\text{RF}}t) + A_{\text{LO}}A_{\text{RF}}\sum_{n=3,5,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)
+\]
+onde o primeiro termo apresenta o produto desejado do modelo ideal e a soma representa demais harmônicos a serem filtrados.
+
+Na expressão, observamos que a comutação de fase realiza cancelamento de componentes DC e harmônicos pares. Isso resulta numa perda de conversão $L_c$ menor e num espectro de saída mais limpo do que o modelo de lei quadrática.
+
+\section{Diodo Schottky} \label{section:schottky}
+
+O diodo Schottky é construído com uma junção metal-semicondutor, onde o semicondutor tipo P da junção P-N é substituído por um metal. A curva IV característica dos dois diodos é análoga, mas o diodo Schottky apresenta uma tensão interna da junção $V_{th}$ menor, possibilitando polarização direta para valores de voltagem aplicada $V_a$ menores do que diodos de junção P-N. Essa sensitividade permite comutação em frequências maiores do que o diodo de junção P-N e permite trabalhar com sinais de potência menor \cite{infineon}.
+
+Para o projeto do mixer, isso também reduz a potência necessária na entrada $x_{\text{LO}}$ do VCO. Na Figura \ref{fig:schottkyIV}, extraída das especificações do diodo Schottky utilizado para o projeto, observamos $V_{th} \approx 0,51 \text{V}$.
+
+Essa sensitividade maior do diodo Schottky pode ser explicada pelo fato de, diferentemente do diodo de junção P-N, onde a condução de corrente é feita pelos portadores minoritários em cada lado da junção (lacunas no lado N e elétrons no lado P), a condução de corrente na junção metal-semicondutor é feita por elétrons tanto no lado N quanto no lado do metal. Isso faz com que haja facilidade do fluxo de portadores (elétrons) nos dois sentidos.
+
+Portanto, nas topologias de mixer que vamos apresentar, o diodo Schottky é preferido ao diodo de junção P-N.
+
+\begin{figure}[h]
     \centering
-    \caption{Diagrama de mixer SSB}
-    \includegraphics[width=0.45\textwidth]{images/ssb_mixer.png}
-    \label{fig:ssb_mixer}
+    \caption{Curva IV característica para diodo Schottky SMS7621-079LF}
+    \includegraphics[width=.45\textwidth]{images/schottkyIV.png}
+    \label{fig:schottkyIV}
     \par\vspace{0.01cm}
-    {\footnotesize \raggedright Fonte: \cite{pohl} \par}
+    {\footnotesize \raggedright Fonte: \cite{schottky}\par}
 \end{figure}
 
-Para um radar FMCW, a entrada $x_{\text{LO}}$ gerada pelo VCO é uma cossenoide cuja frequência é linearmente proporcional ao tempo, também chamada de chirp.
+\section{Topologias para mixers de frequência} \label{section:topologies}
 
-\begin{figure}[h!]
+Existem duas categorias principais de mixers de frequência: \textit{mixers passivos} que não requerem uma fonte de alimentação DC e são construídos utilizando diodos, e \textit{mixer ativos} com designs transistorizados que requerem alimentação DC. Nessa seção temos um apresentação de diferentes topologias estudadas (passivas e ativas) e uma análise dos prós e contras associados a cada uma. %As topologias listadas aqui foram extraídas do livro RF Electronics sugerido pelo colega da turma Andrés Hurtado  \cite{kikkert}.
+
+\subsection{Topologia de diodo único}
+
+A topologia de diodo único, mostrada na Figura \ref{fig:single_diode}, é muito popular em aplicações onde o custo é um fator crítico como o setor de eletrônicos de consumo onde as margens dos fabricantes são baixas.
+
+\begin{figure}[h]
     \centering
-    \caption{Chirp transmitido em radar FMCW}
-    \resizebox{.4\textwidth}{!}{
-        \begin{tikzpicture}
-
-            % --- Definição de Parâmetros Globais ---
-            \def\tmax{5}           % Tempo máximo de simulação (segundos)
-            \def\fzero{1}          % Frequência inicial (f0) em Hz
-            \def\kcoeff{0.5}       % Coeficiente de chirp em Hz/s
-            \def\amplitude{1.2}    % Amplitude do sinal
-
-            % x(t) = cos(2*pi * (f0*t + (k/2)*t^2))
-            \begin{axis}[
-                name=timeaxis,
-                width=12cm, height=3cm,    % Dimensões do gráfico
-                xmin=0, xmax=\tmax,         % Limites do eixo X (Tempo)
-                ymin=-\amplitude-0.3, ymax=\amplitude+0.3, % Limites do eixo Y (Amplitude)
-                axis lines=middle,         % Eixos cruzando no centro (estilo clássico de engenharia)
-                inner axis line style={=>},% Setas nas extremidades dos eixos
-                xlabel style={at={(ticklabel* cs:1)}, anchor=west}, % Posiciona o rótulo do eixo X
-                ylabel style={at={(ticklabel* cs:1)}, anchor=south},% Posiciona o rótulo do eixo Y
-                xlabel={$t$ [s]},          % Rótulo do eixo X (Tempo)
-                ylabel={$x(t)$},           % Rótulo do eixo Y (Sinal)
-                title={\textbf{Chirp no Domínio do Tempo}},
-                ticks=none,                % Remove os números dos ticks (para focar na forma)
-                clip=false                 % Impede que elementos decorativos sejam cortados
-            ]
-
-                % Traça a função do sinal Chirp
-                % A fase é phi(t) = 2*pi * (f0*t + k/2 * t^2)
-                % Usamos o parâmetro \x como variável t do pgfplots
-                \addplot [
-                    domain=0:\tmax,        % Intervalo de plotagem
-                    samples=400,           % Número de pontos (aumente para suavizar em altas frequências)
-                    thick,                 % Linha grossa
-                    blue                   % Cor azul
-                ] {
-                    \amplitude * cos(360 * (\fzero * x + 0.5 * \kcoeff * x^2))
-                };
-
-            \end{axis}
-
-            % f(t) = f0 + k*t
-            \begin{axis}[
-                name=freqaxis,
-                at={(timeaxis.below south west)}, % Posiciona abaixo do gráfico anterior
-                yshift=-2cm,                      % Adiciona um espaçamento vertical
-                width=12cm, height=3cm,    % Mesmas dimensões
-                xmin=0, xmax=\tmax,         % Mesmo intervalo de tempo no eixo X
-                ymin=0, ymax={\fzero + \kcoeff*\tmax + 1}, % Eixo Y começa em 0 e vai até fmax
-                axis lines=left,           % Eixos apenas na esquerda e embaixo
-                xlabel style={at={(ticklabel* cs:1)}, anchor=west},
-                ylabel style={at={(ticklabel* cs:1)}, anchor=south},
-                xlabel={$t$ [s]},          % Eixo X ainda é tempo (para mostrar evolução)
-                ylabel={$f$ [Hz]},    % Rótulo do eixo Y (Frequência Instantânea)
-                title={\textbf{Chirp no Domínio da Frequência}},
-                grid=both,                 % Adiciona uma grade de fundo
-                grid style={line width=.1pt, draw=gray!20}, % Estilo da grade
-                ticks=none                 % Remove os números dos ticks
-            ]
-
-                % Traça a linha reta da frequência instantânea
-                % f_i(t) = f0 + k*t
-                \addplot [
-                    domain=0:\tmax,        % Mesma duração
-                    samples=2,             % Uma reta precisa de apenas 2 pontos
-                    ultra thick,           % Linha muito grossa
-                    red                    % Cor vermelha
-                ] {
-                    \fzero + \kcoeff * x
-                };
-
-            \end{axis}
-        \end{tikzpicture}
-    }
-    \label{fig:chirp}
+    \caption{Mixer como topologia de diodo único para down-conversão}
+    \includegraphics[width=.4\textwidth]{images/singleDiode.png}
+    \label{fig:single_diode}
     \par\vspace{0.01cm}
-    {\footnotesize \raggedright Fonte: os autores\par}
+    {\footnotesize \raggedright Fonte: \cite{kikkert}\par}
 \end{figure}
 
-Em um cenário simplificado, com apenas um objeto na linha de visada do radar, a frequência de diferença $f_{\text{LO}} - f_{\text{RF}}$ é proporcional ao tempo de ida e volta $\tau = \frac{2d}{c}$ do sinal recebido, satisfazendo
+Na Figura \ref{fig:single_diode}, o indutor \texttt{L5} e o capacitor \texttt{C6} ligados à entrada $x_{\text{RF}}$ atuam como um filtro passa-altas. Para frequências $\omega$ baixas, a impedância da linha
+\[
+Z = \frac{1}{\frac{1}{Z_{\text{RF}}} + \frac{1}{j \omega L_5}}
+\]
+é dominada pelo indutor em paralelo que aterra o sinal. Já para frequências $\omega$ altas, o termo $\frac{1}{j\omega L}$ vai à zero. Isso elimina ruído em frequências baixas do sinal recebido na antena RX.
 
-\begin{equation*}
-    f_{\text{LO}} - f_{\text{RF}} = S\left(\frac{2d}{c}\right)
-\end{equation*}
+Observamos que o sinal comutado pelo diodo e o sinal filtrado da antena RX são somadas na entrada de um filtro passa-baixas utilizado na saída do mixer. O capacitor \texttt{C5} nessa configuração domina a impedância da linha da saída para frequências $\omega$ altas, permitindo apenas que frequências $\omega$ baixas sejam conduzidas na saída.
 
-dessa forma, a frequência da saída $x_{\text{IF}}$ do mixer pode ser usada para detecção e medição de distância de objetos \cite{rao2017introduction}.
+\subsection{Topologia de par de diodos}
 
-A medição de velocidade, utilizando o efeito Doppler, é mais simples. Nesse caso, a cossenoide gerada pelo VCO têm frequência constante (um pulso no domínio da frequência).
+Um componente que salta aos olhos na topologia de par de diodos, mostrada na Figura \ref{fig:two_diodes}, é o acoplador de anel híbrido (em inglês, também chamado de rat-race) aplicado sobre as entradas do par de diodos que é responsável pelo casamento de impedância para otimizar a transferência de potência e pela mistura dos sinais \cite{ratrace}.
 
-Num primeiro momento, o objetivo do projeto da disciplina é a fabricação de um radar simples para medições de velocidade.
-
-\section{Topologia de anel de diodos}
-
-A topologia clássica para mixer ativos é a topologia de anel de diodos \cite{ADI_Ch4}.
-
-\begin{figure}[h!]
+\begin{figure}[h]
     \centering
-    \caption{Mixer com a topologia de anel de diodos}
+    \caption{Mixer como topologia de par de diodos para down-conversão}
+    \includegraphics[width=.45\textwidth]{images/twoDiodes.png}
+    \label{fig:two_diodes}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{infineon}\par}
+\end{figure}
+
+Diferente da soma de sinais feita no diplexer, a geometria do anel faz com que a potência de RF seja distribuída em fase ($0^\circ$) para ambos os diodos Schottky, enquanto o sinal do oscilador local (LO) é entregue com uma defasagem de $180^\circ$ entre os dois ramos. Essa alimentação em oposição de fase garante que o ruído de amplitude no VCO seja cancelado por interferência destrutiva no nó de saída, resultando mais limpo na saída $x_{\text{IF}}$. Além do cancelamento de ruído, a simetria do acoplador oferece um bom isolamento entre as portas LO e RF, impedindo que o sinal de alta potência do VCO vaze para a antena de recepção e degrade a sensibilidade do sistema.
+
+Observamos que os indutores de RF choke em paralelo com os diodos, indicados na Figura \ref{fig:two_diodes} com a sigla RFC \cite{RFchoke}, atuam como filtros passa-baixas, dimensionados para bloquear altas frequências na entrada dos diodos.
+
+\subsection{Topologia de anel de diodos}
+
+A topologia clássica para mixer ativos é a topologia de anel de diodos, mostrada na Figura \cite{ADI_Ch4}.
+
+\begin{figure}[h]
+    \centering
+    \caption{Mixer com a topologia passiva de anel de diodos}
     \includegraphics[width=.4\textwidth]{images/diode_ring_mixer.png}
+    \label{fig:diode_ring}
     \par\vspace{0.01cm}
     {\footnotesize \raggedright Fonte: \cite{ADI_Ch4}\par}
 \end{figure}
+
+Na Figura \ref{fig:diode_ring}, observamos que as duas entradas são decompostas em entradas diferenciais com defasagem de $180^\circ$
+\begin{align*}
+    \begin{cases}
+        x_{\text{LO}}(t) &= x_{\text{LO}+}(t) + x_{\text{LO}-}(t) \\
+        x_{\text{RF}}(t) &= x_{\text{RF}+}(t) + x_{\text{RF}-}(t)
+    \end{cases}
+\end{align*}
+e os pares dessas entradas diferenciais definem a polarização dos diodos no anel e comutam o sinal que é transmitido para a saída $x_{\text{IF}}(t)$.
+
+\subsection{Topologia célula de Gilbert}
+
+Nessa seção, apresentamos um exemplo de topologia ativa: a célula de Gilbert, mostrada na Figura \ref{fig:gilbert}.
+
+Enquanto nas topologias passivas a comutação de sinais pelos diodos Schottky era feita em tensão, a célula de Gilbert comuta os sinais de entrada em corrente. Na Figura \ref{fig:gilbert}, vemos que um bloco fundamental na célula de Gilbert é o par diferencial CMOS que implementa os estágio de transcondutância e comutação do circuito.
+
+\begin{figure}[h]
+    \centering
+    \caption{Mixer com a topologia ativa de célula de Gilbert}
+    \includegraphics[width=.4\textwidth]{images/gilbertCell.png}
+    \label{fig:gilbert}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{vivas2014}\par}
+\end{figure}
+
+Para compreender o funcionamento da célula, analisamos primeiro o ponto de operação DC de um par diferencial isolado, mostrado na Figura \ref{fig:diffPair}. Para isso, suponha que ambas as entradas estejam aterradas. Temos
+
+\begin{align}
+		I_{D_1} + I_{D_2} &= I_Q \\
+		I_{D_1} &= I_{D_2} \quad \text{ por simetria}
+\end{align}
+
+A corrente de dreno é fixada pela fonte de corrente supondo que ambos os transistores estejam na saturação, as tensões de fonte se estabilizarão em um valor que satisfaça $I_{D_1} = I_{D_2} = \frac{I_Q}{2}$.
+
+Uma variação nas entradas tal que $V_{G_1} > V_{G_2}$ causa um desequilíbrio de modo que $V_{GS_1}$ torna-se maior que $V_{GS_2}$, fazendo com que $I_{D_1}$ aumente e, consequentemente, $I_{D_2}$ diminua.
+
+\begin{figure}[h]
+    \centering
+    \caption{Circuito do par diferencial}
+    \includegraphics[width=.3\textwidth]{images/diffPair.png}
+    \label{fig:diffPair}
+    \par\vspace{0.01cm}
+    {\footnotesize \raggedright Fonte: \cite{neaman}\par}
+\end{figure}
+
+Dessa forma, na célula de Gilbert, o par diferencial no estágio de transcondutância converte o sinal de radiofrequência $V_{RF}$ em variações de corrente para os estágios superiores.
+
+No estágio de comutação, quando o semiciclo da entrada $x_{\text{LO}}$  do VCO é positivo ($V_{\text{LO}+} > V_{\text{LO}-}$), a corrente flui preferencialmente por um braço do par, e quando o semiciclo é negativo ($V_{\text{LO}-} > V_{\text{LO}+}$), a corrente é direcionada para o braço oposto. As impedâncias no topo da célula convertem as correntes comutadas de volta para tensões $V_{\text{IF}-}$, $V_{\text{IF}+}$ representando as saídas do mixer nas frequências $f_{\text{LO}} \pm f_{\text{RF}}$.
+
+\section{Design e simulação no ADS} \label{section:ADS}
+
+Optamos por uma topologia passiva para simplificar o design do mixer uma vez que não precisamos nos preocupar com a alimentação no caso dos diodos. A construção do circuito passivo com diodos também se revelou mais barata quando procuramos por componentes no site da Mouser. Entre as topologias passivas, a topologia escolhida foi a de par de diodos Schottky por fornecer um bom compromisso entre isolamento, baixa perda de conversão e complexidade do design.
+
+\subsection{Design do acoplador de anel híbrido}
+
+\textcolor{red}{futuro...}
+
+\subsection{Design do mixer com par de diodos}
+
+\textcolor{red}{futuro...}
 
 \newpage
 \bibliography{refs}
