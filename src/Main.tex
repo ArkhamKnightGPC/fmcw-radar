@@ -153,7 +153,9 @@ Na prática, as frequências $f_{\text{LO}}$ e $f_{\text{RF}}$ são bastante pr�
 
 \section{Modelo de mixer de lei quadrática} \label{section:squareLaw}
 
-Na Figura \ref{fig:squareLaw} temos um circuito genérico implementando um mixer de frequência com sinais de corrente nas entradas $x_{\text{LO}}$ e $x_{\text{RF}}$. Na esquerda, temos um diplexer utilizado para combinar os sinais de entrada em um nó com corrente $x_{\text{LO}} + x_{\text{RF}}$. Na direita, temos um componente não-linear (um diodos ou um transistor) responsável pela mistura de frequências.
+Uma estratégia para gerar um sinal de saída com uma combinação das frequências de entrada é utilizar um componente (ou uma rede de componentes) não-lineares, como diodos ou transistores. Para potências de entrada baixas próximas da tensão interna da junção $V_{th}$, a curva IV característica pode ser expandida em uma série de Taylor e aproximada por uma curva de ordem 2.
+
+Na Figura \ref{fig:squareLaw} temos um circuito genérico implementando essa estratégia para um mixer de frequência com sinais de corrente nas entradas $x_{\text{LO}}$ e $x_{\text{RF}}$. Na esquerda, temos um diplexer utilizado para combinar os sinais de entrada em um nó com corrente $x_{\text{LO}} + x_{\text{RF}}$. Na direita, temos um componente não-linear (um diodos ou um transistor) responsável pela mistura de frequências.
 
 \begin{figure}[h]
     \centering
@@ -164,9 +166,9 @@ Na Figura \ref{fig:squareLaw} temos um circuito genérico implementando um mixer
     {\footnotesize \raggedright Fonte: \href{https://www.youtube.com/watch?v=TaaIEdIzofc}{(RF Get Down, 2023)} \par}
 \end{figure}
 
-Para potências de entrada baixas próximas da tensão interna da junção $V_{th}$, a curva IV característica pode ser expandida em uma série de Taylor e aproximada por uma curva de ordem 2. Ao aplicarmos a soma das entrada $x_{\text{LO}} + x_{\text{RF}}$ no componente, temos a saída
+Ao aplicarmos a soma das entrada $x_{\text{LO}} + x_{\text{RF}}$ no componente, temos a saída
 \[
-y(t) = a_2 \bigl( A_{\text{LO}}\cos(\omega_{\text{LO}}) + A_{\text{RF}}\cos(\omega_{\text{RF}}) \bigr)^2
+y(t) = a_2 \bigl( A_{\text{LO}}\cos(\omega_{\text{LO}}t) + A_{\text{RF}}\cos(\omega_{\text{RF}}t) \bigr)^2
 \]
 onde o produto pode ser expandido para gerar produtos de cossenos com as frequências $f_{\text{LO}} \pm f_{\text{RF}}$. Temos
 \[
@@ -184,15 +186,13 @@ onde observamos a presença de produtos desejados, mas também de componentes in
 
 As topologias que serão exploradas implementam um outro modelo de mistura a partir de comutação de fase. Neste modelo, o sinal do VCO $x_{\text{LO}}(t)$ possui potência suficientemente maior do que a tensão interna das junções $V_{th}$ para atuar como um sinal de controle, operando os componentes não-lineares como chaves ideais.
 
-Seja $x_{\text{LO}}(t) = A_{\text{LO}}\sum_{n=1,3,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)$ uma onda quadrada periódica representada em série de Fourier.
+Nessa abordagem, interpretamos o sinal de entrada $x_{\text{LO}}(t)$ a partir da sua representação em série de Fourier. Por exemplo, tomemos $x_{\text{LO}}(t) = A_{\text{LO}}\sum_{n=1,3,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)$ uma onda quadrática periódica.
 
 Ao realizar o produto $x_{\text{IF}}(t) = x_{\text{LO}}(t) \cdot x_{\text{RF}}(t)$ temos
 \[
-y(t) = A_{\text{LO}}A_{\text{RF}}\frac{\pi}{4}\cos(\omega_{\text{LO}}t)\cos(\omega_{\text{RF}}t) + A_{\text{LO}}A_{\text{RF}}\sum_{n=3,5,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)
+y(t) = A_{\text{LO}}A_{\text{RF}}\frac{\pi}{4}\sin(\omega_{\text{LO}}t)\cos(\omega_{\text{RF}}t) + A_{\text{LO}}A_{\text{RF}}\sum_{n=3,5,\dots}^{\infty} \frac{\pi}{4n} \sin\bigl(n \omega_{\text{LO}} t\bigr)\cos\bigl(\omega_{\text{RF}} t\bigr)
 \]
-onde o primeiro termo apresenta o produto desejado do modelo ideal e a soma representa demais harmônicos a serem filtrados.
-
-Na expressão, observamos que a comutação de fase realiza cancelamento de componentes DC e harmônicos pares. Isso resulta numa perda de conversão $L_c$ menor e num espectro de saída mais limpo do que o modelo de lei quadrática.
+onde o primeiro termo apresenta o produto desejado do modelo ideal e a soma dos demais harmônicos é indesejada e deve ser filtrada.
 
 \section{Diodo Schottky} \label{section:schottky}
 
