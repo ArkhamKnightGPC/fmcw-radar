@@ -1,0 +1,10 @@
+{
+    "jobs": [
+        {
+            "name": "microstrip_low_pass_filter",
+            "shortName": "j0"
+        }
+    ],
+    "maximumJobIndex": 0,
+    "writtenAt": "Mon Apr 13 21:30:51 2026"
+}

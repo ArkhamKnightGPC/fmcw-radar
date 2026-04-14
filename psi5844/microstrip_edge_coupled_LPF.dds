@@ -27,11 +27,11 @@ ddoId = get_new(ddsId, "Object");
 // DataDisplay Object:
 	set(ddoId, "Path", dds_get_exec_path(what_file(0)));
 	set(ddoId, "Name", dds_get_exec_file(what_file(0)));
-	set(ddoId, "FileModifiedDateAndTime", "2026-04-14T00:23:08Z");
-	set(ddoId, "FileCreatedDateAndTime", "2026-04-13T01:49:54Z");
+	set(ddoId, "FileModifiedDateAndTime", "2026-04-14T00:04:16Z");
+	set(ddoId, "FileCreatedDateAndTime", "2026-04-14T00:02:59Z");
 	dssId = get(ddoId, "DatasetServer");
 // Default Dataset
-	set(ddoId, "DefaultDataset", "microstrip_low_pass_filter");
+	set(ddoId, "DefaultDataset", "microstrip_edge_coupled_LPF");
 // Snap/Grid Defaults 
 	set(ddoId, "GridType", 0);
 	set(ddoId, "GridOn", FALSE);
@@ -50,12 +50,12 @@ if (pageId == NULL) pageId = get_new(ddoId, "Page");
 goId0 = get_new(pageId, "Plot");
 // Base Class Object:
 	set(goId0, "Name", "");
-	set(goId0, "Uid", 183626673);
+	set(goId0, "Uid", 501105998);
 // Graphical Object:
-	set(goId0, "Right", 6475);
-	set(goId0, "Bottom", 3127);
-	set(goId0, "Left", 2031);
-	set(goId0, "Top", 125);
+	set(goId0, "Right", 5725);
+	set(goId0, "Bottom", 3752);
+	set(goId0, "Left", 1281);
+	set(goId0, "Top", 750);
 	set(goId0, "Zrot", 0);
 	set(goId0, "Yrot", 0);
 	set(goId0, "Xrot", 0);
@@ -79,7 +79,7 @@ goId0 = get_new(pageId, "Plot");
 	set(goId0, "TitleColor", 0);
 axisID = get_new(goId0, "Axis", ddsXaxis, "X Axis");
 // Axis...
-	set(axisID, "Uid", 655804314);
+	set(axisID, "Uid", 1042668795);
 	set(axisID, "Color", 104);
 	set(axisID, "GridOnOff", TRUE);
 	set(axisID, "LineThick", 7);
@@ -93,15 +93,15 @@ axisID = get_new(goId0, "Axis", ddsXaxis, "X Axis");
 	set(axisID, "TickFontSize", 111);
 	set(axisID, "AutoscaleOnOff", TRUE);
 	set(axisID, "MinValue", 0);
-	set(axisID, "MaxValue", 1000000000);
-	set(axisID, "StepSize", 100000000);
+	set(axisID, "MaxValue", 2000000000);
+	set(axisID, "StepSize", 200000000);
 	set(axisID, "Logarithmic", FALSE);
 	_DDSobjectRestoreFont_(axisID, "Font", "Roboto", "Arial For CAE");
 	set(axisID, "Format", ddsFormatAutomatic);
 	set(axisID, "NumDigits", 3);
 axisID = get_new(goId0, "Axis", ddsYaxis, "Y Axis");
 // Axis...
-	set(axisID, "Uid", 794734545);
+	set(axisID, "Uid", 262414823);
 	set(axisID, "Color", 104);
 	set(axisID, "GridOnOff", TRUE);
 	set(axisID, "LineThick", 7);
@@ -114,16 +114,16 @@ axisID = get_new(goId0, "Axis", ddsYaxis, "Y Axis");
 	set(axisID, "FontSize", 139);
 	set(axisID, "TickFontSize", 111);
 	set(axisID, "AutoscaleOnOff", TRUE);
-	set(axisID, "MinValue", -180);
-	set(axisID, "MaxValue", -60);
-	set(axisID, "StepSize", 20);
+	set(axisID, "MinValue", -210);
+	set(axisID, "MaxValue", -140);
+	set(axisID, "StepSize", 10);
 	set(axisID, "Logarithmic", FALSE);
 	_DDSobjectRestoreFont_(axisID, "Font", "Roboto", "Arial For CAE");
 	set(axisID, "Format", ddsFormatAutomatic);
 	set(axisID, "NumDigits", 3);
 axisID = get_new(goId0, "Axis", ddsRightYaxis, "Right Y Axis");
 // Axis...
-	set(axisID, "Uid", 1922313383);
+	set(axisID, "Uid", 1100037557);
 	set(axisID, "Color", 104);
 	set(axisID, "GridOnOff", FALSE);
 	set(axisID, "LineThick", 7);
@@ -145,7 +145,7 @@ axisID = get_new(goId0, "Axis", ddsRightYaxis, "Right Y Axis");
 	set(axisID, "NumDigits", 3);
 axisID = get_new(goId0, "Axis", ddsXaxis, "Bottom X Axis");
 // Axis...
-	set(axisID, "Uid", 1565886497);
+	set(axisID, "Uid", 863413275);
 	set(axisID, "Color", 104);
 	set(axisID, "GridOnOff", FALSE);
 	set(axisID, "LineThick", 7);
@@ -169,7 +169,7 @@ traceID = get_new(goId0, "Trace", "dB(S(2,1))", "X Axis", "Y Axis", FALSE);
 // Trace:
 	set(traceID, "TraceType", ddsAutomaticTraceType);
 	set(traceID, "Color", 1);
-	set(traceID, "Uid", 1115968093);
+	set(traceID, "Uid", 1616606095);
 	set(traceID, "Status", 536913920);
 // Rect trace:
 	set(traceID, "LineThick", 7);
@@ -200,16 +200,16 @@ traceID = get_new(goId0, "Trace", "dB(S(2,1))", "X Axis", "Y Axis", FALSE);
 	set(goId0, "InitPlot", 0);
 // Base Class Object:
 	set(pageId, "Name", "page 1");
-	set(pageId, "Uid", 1668747696);
+	set(pageId, "Uid", 103236240);
 	set(pageId, "Invisible", FALSE);
 	set(ddoId, "UpdateAllExpressions", TRUE);
 	set(ddoId, "EnableExpressionUpdates", TRUE);
 
-ddWinId = get_new(ddsId, "Window", 518, 219, 616, 404);
+ddWinId = get_new(ddsId, "Window", 2235, 411, 616, 404);
 	set(ddWinId, "Object", ddoId);
-	set(ddWinId, "CurrentPage", 1668747696);
-	set(ddWinId, "PageViewRect_1668747696", list(1767, 3262, 7387, -43));
-	set(ddWinId, "Frame", list(518, 219, 616, 404));
+	set(ddWinId, "CurrentPage", 103236240);
+	set(ddWinId, "PageViewRect_103236240", list(1280, 3631, 6071, 813));
+	set(ddWinId, "Frame", list(2235, 411, 616, 404));
 	set(ddWinId, "Maximized", FALSE);
 	set(ddWinId, "ForegroundColor", 0);
 	set(ddWinId, "BackgroundColor", 8);
