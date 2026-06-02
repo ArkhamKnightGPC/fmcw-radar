@@ -1,6 +1,0 @@
-<!DOCTYPE DistributedSimConfig>
-<sm_setup ts="Mon Apr 13 21:31:04 2026" version="1.0">
- <sm_ps>
-  <ps_info fitting_sweep_points_to_jobs="TRUE" num_parallel="3" site_cluster_options="--threads 1" uploading_file="" url="sitecluster://local?name=Local Queue"/>
- </sm_ps>
-</sm_setup>

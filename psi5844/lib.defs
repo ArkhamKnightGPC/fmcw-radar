@@ -1,4 +1,0 @@
-INCLUDE $HPEESOF_DIR/oalibs/analog_rf.defs
-INCLUDE $HPEESOF_DIR/oalibs/dsp.defs
-DEFINE psi5844_lib psi5844_lib
-ASSIGN psi5844_lib libMode shared
