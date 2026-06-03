@@ -8,8 +8,6 @@ O [plano de testes presente nesse repositório](https://github.com/ArkhamKnightG
 
 ## Galeria de imagens
 
-![](rat-race-montagemTESTE.jpeg)
-
 ![](circuitos_fabricados.jpeg)
 
 ![](layout_ratrace.png)
