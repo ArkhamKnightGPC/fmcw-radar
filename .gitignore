@@ -1,7 +1,7 @@
 *.loq
 
-src/
-ppt/
+src/*
+ppt/*
 
 # ADS
 *.tag
