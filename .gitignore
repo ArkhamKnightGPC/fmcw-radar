@@ -1,5 +1,8 @@
 *.loq
 
+src/
+ppt/
+
 # ADS
 *.tag
 *.wrkstate
